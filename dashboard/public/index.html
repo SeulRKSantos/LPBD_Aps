@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planta simulada – telemetria IoT</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="barra">
+    <div class="planta">
+      <span class="planta-nome">Planta simulada</span>
+      <span class="planta-banco" id="banco-info">conectando…</span>
+    </div>
+    <nav class="abas" role="tablist" aria-label="Telas">
+      <button role="tab" aria-selected="true" aria-controls="tela-planta" id="aba-planta" class="aba">Planta ao vivo</button>
+      <button role="tab" aria-selected="false" aria-controls="tela-lab" id="aba-lab" class="aba" tabindex="-1">Laboratório</button>
+      <button role="tab" aria-selected="false" aria-controls="tela-bench" id="aba-bench" class="aba" tabindex="-1">Benchmark</button>
+      <button role="tab" aria-selected="false" aria-controls="tela-dados" id="aba-dados" class="aba" tabindex="-1">Dados e ciclo de vida</button>
+    </nav>
+    <div class="estado">
+      <span class="job" id="job-indicador" hidden></span>
+      <span class="conexao" id="conexao" data-ok="false">Sem conexão</span>
+      <time class="relogio" id="relogio">--:--:--</time>
+    </div>
+  </header>
+
+  <main>
+    <!-- ================================================================ PLANTA -->
+    <section id="tela-planta" role="tabpanel" aria-labelledby="aba-planta" class="tela">
+      <dl class="indicadores">
+        <div class="ind ind-destaque"><dt>Leituras por segundo</dt><dd id="k-lps">0</dd></div>
+        <div class="ind"><dt>Leituras recebidas</dt><dd id="k-total">–</dd></div>
+        <div class="ind"><dt>Alertas ativos</dt><dd id="k-alertas">–</dd></div>
+        <div class="ind"><dt>Violações registradas hoje</dt><dd id="k-violacoes">–</dd></div>
+        <div class="ind"><dt>Partições da telemetria</dt><dd id="k-particoes">–</dd></div>
+        <div class="ind"><dt>Tamanho do banco</dt><dd id="k-tamanho">–</dd></div>
+      </dl>
+
+      <div class="grade-planta">
+        <div class="painel painel-planta">
+          <div class="painel-titulo">
+            <h2>Equipamentos por área</h2>
+            <ul class="legenda-status" aria-label="Legenda">
+              <li><span class="sinal sinal-ok"></span>Operando</li>
+              <li><span class="sinal sinal-atencao"></span>Atenção</li>
+              <li><span class="sinal sinal-falha"></span>Falha</li>
+              <li><span class="sinal sinal-manutencao"></span>Manutenção</li>
+            </ul>
+          </div>
+          <div class="areas" id="areas"></div>
+        </div>
+
+        <aside class="painel painel-alarmes" aria-labelledby="t-alarmes">
+          <div class="painel-titulo">
+            <h2 id="t-alarmes">Alarmes</h2>
+            <button class="btn btn-discreto" id="resolver-todos">Resolver todos</button>
+          </div>
+          <p class="ajuda">Alarmes piscando ainda não foram reconhecidos.</p>
+          <ol class="alarmes" id="alarmes"></ol>
+        </aside>
+      </div>
+
+      <div class="grade-dupla">
+        <div class="painel">
+          <div class="painel-titulo"><h2>Leituras inseridas por segundo</h2><span class="nota">últimos 2 minutos</span></div>
+          <div class="grafico grafico-baixo"><canvas id="g-vazao" aria-label="Leituras por segundo nos últimos 2 minutos" role="img"></canvas></div>
+        </div>
+        <div class="painel">
+          <div class="painel-titulo"><h2>Notificações da trigger</h2><span class="nota">LISTEN alertas_fabrica</span></div>
+          <ol class="feed" id="feed" aria-live="polite"><li class="feed-vazio">Aguardando notificações. Elas chegam quando um alerta é aberto ou o status de um equipamento muda.</li></ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ LABORATÓRIO -->
+    <section id="tela-lab" role="tabpanel" aria-labelledby="aba-lab" class="tela" hidden>
+      <div class="painel">
+        <div class="painel-titulo"><h2>Leitura manual</h2><span class="nota">insere uma leitura e mostra o que a trigger fez</span></div>
+        <div class="lab-leitura">
+          <div class="lab-controles">
+            <label class="campo">Sensor
+              <select id="l-sensor"></select>
+            </label>
+            <div class="faixa" id="l-faixa" aria-hidden="true"></div>
+            <div class="faixa-escala" id="l-escala" aria-hidden="true"></div>
+            <div class="linha-campos">
+              <label class="campo campo-valor"><span>Valor (<span id="l-unidade"></span>)</span>
+                <input type="number" id="l-valor" step="0.1">
+              </label>
+              <input type="range" id="l-slider" aria-label="Ajustar valor">
+            </div>
+            <div class="atalhos">
+              <button class="btn" data-preset="normal">Valor normal</button>
+              <button class="btn" data-preset="atencao">Faixa de atenção</button>
+              <button class="btn" data-preset="critico">Faixa crítica</button>
+              <button class="btn btn-primario" id="l-inserir">Inserir leitura</button>
+            </div>
+          </div>
+          <div class="lab-resultado" id="l-resultado">
+            <p class="vazio">Escolha um sensor e um valor. O resultado da trigger aparece aqui.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="painel">
+        <div class="painel-titulo"><h2>Geração de carga</h2><span class="nota" id="c-estado">pronto</span></div>
+        <div class="lab-carga">
+          <form class="cartao-acao" id="f-simulador">
+            <h3>Simulador de fluxo</h3>
+            <p>Executa a procedure <code>sp_simular_fluxo</code>: inserções em lote dentro do banco.</p>
+            <label class="campo">Leituras <input type="number" name="total" value="300000" min="1000" max="5000000" step="1000"></label>
+            <label class="campo">% de leituras críticas <input type="number" name="pct" value="0.01" min="0" max="20" step="0.01"></label>
+            <label class="campo-check"><input type="checkbox" name="triggers" checked> Com triggers</label>
+            <button class="btn btn-primario" type="submit">Executar simulador</button>
+          </form>
+          <form class="cartao-acao" id="f-carga">
+            <h3>Carga concorrente</h3>
+            <p>Abre várias conexões; cada transação é um gateway enviando todos os sensores de um equipamento.</p>
+            <label class="campo">Conexões simultâneas <input type="number" name="clientes" value="16" min="1" max="64"></label>
+            <label class="campo">Duração (s) <input type="number" name="segundos" value="30" min="5" max="300"></label>
+            <label class="campo">% de leituras críticas <input type="number" name="pct" value="0.02" min="0" max="20" step="0.01"></label>
+            <div class="linha-botoes">
+              <button class="btn btn-primario" type="submit">Iniciar carga</button>
+              <button class="btn" type="button" id="c-parar" disabled>Parar</button>
+            </div>
+          </form>
+          <div class="carga-monitor">
+            <div class="grafico grafico-baixo"><canvas id="g-carga" role="img" aria-label="Vazão durante a carga"></canvas></div>
+            <dl class="carga-numeros" id="c-numeros"></dl>
+            <pre class="log" id="c-log" aria-live="polite"></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="painel">
+        <div class="painel-titulo"><h2>Plano de execução lado a lado</h2><span class="nota">EXPLAIN ANALYZE, mediana de 5 execuções</span></div>
+        <div class="experimentos" id="experimentos"></div>
+        <div class="comparacao" id="comparacao">
+          <p class="vazio">Escolha uma comparação para executar as duas versões da consulta no banco.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ BENCHMARK -->
+    <section id="tela-bench" role="tabpanel" aria-labelledby="aba-bench" class="tela" hidden>
+      <div class="painel">
+        <div class="painel-titulo">
+          <h2>Tempo de resposta por cenário</h2>
+          <div class="ferramentas">
+            <label class="campo campo-inline">Execução <select id="b-execucao"></select></label>
+            <label class="campo campo-inline">Repetições <input type="number" id="b-rep" value="5" min="1" max="20"></label>
+            <button class="btn btn-primario" id="b-executar">Executar benchmark</button>
+          </div>
+        </div>
+        <p class="ajuda" id="b-resumo"></p>
+        <div class="grafico grafico-alto"><canvas id="g-bench" role="img" aria-label="Mediana do tempo de execução por consulta e cenário"></canvas></div>
+        <pre class="log" id="b-log" hidden></pre>
+      </div>
+      <div class="painel">
+        <div class="painel-titulo"><h2>Comparação detalhada</h2></div>
+        <div class="tabela-rolagem"><table class="tabela" id="b-tabela"></table></div>
+      </div>
+      <div class="grade-dupla">
+        <div class="painel">
+          <div class="painel-titulo"><h2>Tamanho dos índices</h2></div>
+          <div class="grafico grafico-medio"><canvas id="g-indices" role="img" aria-label="Tamanho dos índices"></canvas></div>
+        </div>
+        <div class="painel">
+          <div class="painel-titulo"><h2>Vazão de escrita por execução</h2><span class="nota">registrada em log_rotina</span></div>
+          <div class="grafico grafico-medio"><canvas id="g-escrita" role="img" aria-label="Vazão de escrita por execução"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ DADOS -->
+    <section id="tela-dados" role="tabpanel" aria-labelledby="aba-dados" class="tela" hidden>
+      <div class="painel">
+        <div class="painel-titulo">
+          <h2>Leituras por partição</h2>
+          <div class="ferramentas">
+            <button class="btn" id="p-atualizar">Recontar</button>
+            <button class="btn btn-primario" id="p-arquivar">Arquivar dados com mais de 30 dias</button>
+          </div>
+        </div>
+        <p class="ajuda" id="p-resumo"></p>
+        <div class="grafico grafico-medio"><canvas id="g-particoes" role="img" aria-label="Leituras por partição"></canvas></div>
+        <div id="p-resultado"></div>
+      </div>
+      <div class="painel">
+        <div class="painel-titulo">
+          <h2>Histórico de status (tabela temporal)</h2>
+          <div class="ferramentas" role="group" aria-label="Janela de tempo">
+            <button class="btn btn-janela" data-min="30" aria-pressed="true">30 min</button>
+            <button class="btn btn-janela" data-min="120" aria-pressed="false">2 h</button>
+            <button class="btn btn-janela" data-min="720" aria-pressed="false">12 h</button>
+          </div>
+        </div>
+        <div class="grafico grafico-alto"><canvas id="g-linha" role="img" aria-label="Linha do tempo do status dos equipamentos"></canvas></div>
+        <div class="tabela-rolagem"><table class="tabela" id="t-disp"></table></div>
+      </div>
+      <div class="painel">
+        <div class="painel-titulo">
+          <h2>Relatório de produção de hoje (view materializada)</h2>
+          <button class="btn btn-primario" id="r-atualizar">Atualizar view materializada</button>
+        </div>
+        <p class="ajuda" id="r-info"></p>
+        <div class="tabela-rolagem"><table class="tabela" id="t-relatorio"></table></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="dlg-equip" class="dialogo">
+    <form method="dialog" class="dialogo-corpo" id="dlg-conteudo"></form>
+  </dialog>
+
+  <div class="aviso" id="aviso" role="status" hidden></div>
+
+  <script src="/vendor/chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -43,7 +43,7 @@ PSQL=(psql -X -q -v ON_ERROR_STOP=1)
 # -----------------------------------------------------------------------------
 if [ "$INSTALAR" -eq 1 ]; then
     passo "Instalando PostgreSQL"
-    sudo apt-get update -q
+    sudo apt-get update -q || aviso "apt-get update terminou com erros em outros repositórios; seguindo com a instalação."
     sudo apt-get install -y -q postgresql postgresql-contrib
 
     PGVER="$(ls /usr/lib/postgresql | sort -V | tail -1)"
