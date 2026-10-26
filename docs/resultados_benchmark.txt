@@ -1,0 +1,33 @@
+             consulta              |              cenario              | mediana_ms | ganho_vs_a 
+-----------------------------------+-----------------------------------+------------+------------
+ Q1 Relatório horário (1 dia)      | A) Tabela única sem índices       |     60.277 |        1.0
+ Q1 Relatório horário (1 dia)      | B) Tabela única + B-Tree          |     19.162 |        3.1
+ Q1 Relatório horário (1 dia)      | D) Particionada por dia + índices |     18.035 |        3.3
+ Q1 Relatório horário (1 dia)      | E) View materializada             |      0.281 |      214.5
+ Q2 Últimas 100 leituras do sensor | A) Tabela única sem índices       |     52.574 |        1.0
+ Q2 Últimas 100 leituras do sensor | B) Tabela única + B-Tree          |      0.013 |     4044.2
+ Q2 Últimas 100 leituras do sensor | D) Particionada por dia + índices |      0.122 |      430.9
+ Q3 Sensor em janela de 1 hora     | A) Tabela única sem índices       |     55.913 |        1.0
+ Q3 Sensor em janela de 1 hora     | B) Tabela única + B-Tree          |      0.112 |      499.2
+ Q3 Sensor em janela de 1 hora     | D) Particionada por dia + índices |      0.017 |     3289.0
+ Q4 Busca por igualdade (id = x)   | A) Tabela única sem índices       |     44.231 |        1.0
+ Q4 Busca por igualdade (id = x)   | B) Tabela única + B-Tree          |      0.002 |    22115.5
+ Q4 Busca por igualdade (id = x)   | C) Tabela única + Hash (id)       |      0.006 |     7371.8
+ Q4 Busca por igualdade (id = x)   | D) Particionada por dia + índices |      0.053 |      834.5
+ Q5 Busca por faixa (id BETWEEN)   | A) Tabela única sem índices       |     49.720 |        1.0
+ Q5 Busca por faixa (id BETWEEN)   | B) Tabela única + B-Tree          |      0.090 |      552.4
+ Q5 Busca por faixa (id BETWEEN)   | C) Tabela única + Hash (id)       |     52.511 |        0.9
+ Q5 Busca por faixa (id BETWEEN)   | D) Particionada por dia + índices |      0.120 |      414.3
+(18 rows)
+
+ cenario |           indice           | metodo | tamanho | tamanho_bytes | tempo_criacao_ms 
+---------+----------------------------+--------+---------+---------------+------------------
+ B       | bx_btree_id                | btree  | 68 MB   |      71737344 |          680.349
+ B       | bx_btree_sensor_tempo      | btree  | 96 MB   |     100524032 |         1291.478
+ B       | bx_btree_tempo             | btree  | 60 MB   |      63004672 |          733.361
+ C       | bx_hash_id                 | hash   | 102 MB  |     107044864 |         2548.334
+ D       | ix_telemetria_sensor_tempo | btree  | 168 MB  |     176365568 |            0.000
+ D       | ix_telemetria_tempo_brin   | brin   | 944 kB  |        966656 |            0.000
+ D       | telemetria_pkey            | btree  | 96 MB   |     101081088 |            0.000
+(7 rows)
+
