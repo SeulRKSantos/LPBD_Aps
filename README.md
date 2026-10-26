@@ -233,3 +233,13 @@ Cada consulta roda uma vez para aquecer o cache e depois N vezes com `EXPLAIN (A
 | `permission denied to set parameter "session_replication_role"` | a carga sem triggers exige superusuário; use `p_disparar_triggers => true` |
 | `invalid transaction termination` ao chamar procedure | não chame `sp_simular_fluxo`/`sp_arquivar_telemetria` dentro de `BEGIN ... COMMIT` (elas controlam a própria transação) |
 | Painel sem `watch` | `sudo apt install procps` |
+
+## Dashboard web
+
+Interface em tempo real com a planta ao vivo, alarmes, leitura manual com o efeito da trigger, carga concorrente, EXPLAIN lado a lado, benchmark e ciclo de vida dos dados.
+
+```bash
+cd dashboard && npm install && npm start    # http://localhost:3000
+```
+
+Detalhes em [dashboard/README.md](dashboard/README.md).
