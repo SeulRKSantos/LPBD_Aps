@@ -118,7 +118,9 @@ BEGIN
     END IF;
 
     -- Cópia NÃO particionada e SEM índices com os mesmos dados (linha de base).
-    DROP TABLE IF EXISTS fabrica.bench_telemetria_plana;
+    IF to_regclass('fabrica.bench_telemetria_plana') IS NOT NULL THEN   -- sobra de execução interrompida
+        DROP TABLE fabrica.bench_telemetria_plana;
+    END IF;
     CREATE TABLE fabrica.bench_telemetria_plana AS
         SELECT id, sensor_id, lido_em, valor, recebido_em FROM fabrica.telemetria;
     GET DIAGNOSTICS v_linhas = ROW_COUNT;
