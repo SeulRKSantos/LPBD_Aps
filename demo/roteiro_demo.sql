@@ -7,6 +7,7 @@
 -- =============================================================================
 \set ON_ERROR_STOP 1
 \pset footer off
+\pset pager off
 SET search_path = fabrica, public;
 
 \echo '\n================ 0. Estado inicial (todos os alertas resolvidos) ================'
